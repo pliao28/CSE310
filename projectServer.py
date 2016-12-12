@@ -1,32 +1,31 @@
-
 from socket import *
+import datetime
 import thread
 
-#A class for the discussion groups that are formed, where the client 
-#can choose to join and unjoin
+port = 6789
+#groups[] holds objects in a list that hold the name of the group
+#the clients in the group, and the messages in the group
+groups = []
+
+#Initial group map to map group names to their associated index in the group array
+groupMap = {'Group 0'.strip():0,'Group 1'.strip():1,'Group 2'.strip():2,'Group 3'.strip():3,'Group 4'.strip():4,'Group 5'.strip():5,'Group 6'.strip():6,'Group 7'.strip():7,'Group 8'.strip():8,'Group 9'.strip():9,'Group 10'.strip():10,'Group 11'.strip():11,'Group 12'.strip():12,'Group 13'.strip():13,'Group 14'.strip():14,}
+
+
+#global messageID counter to keep track of all messages added to the group
+messageCounter = 0
+
 class discussionGroup:
-	def __init__(self, dgName):
-		self.name = dgName
-		self.message = []
-		self.clients = []
+    def __init__(self, dgName):
+        self.name = dgName
+        self.message = []
 
-#class for message contains the user who posted, the Time that it was posted, it's subject, and message body
 class Message:
-	def __init__(self, username, postTime, subject, body):
-		self.username = username
-		self.postTime = postTime
-		self.subject = subject
-		self.body = body
-		self.id = uniqueMessageID
-
-#Client classs that contains the username and connection address in order to respond to the client, and the groups the client has joined
-class Client:
-	def __init__(self, connection):
-		self.username = ''
-		self.connection = connection
-		self.groups = []
-
-#intialize the 15 groups
+    def __init__(self,userName,postDate,subject,body):
+        self.userName = userName
+        self.postDate = postDate
+        self.subject = subject
+        self.body = body
+        
 def init():
         g0 = discussionGroup('Group 0')
         groups.append(g0)
@@ -59,48 +58,92 @@ def init():
         g14 = discussionGroup('Group 14')
         groups.append(g14)
 
+def handler(connectionSocket, addr):
+    global messageCounter
+    global groups
+    while 1:
+        request = connectionSocket.recv(4096)
+        request = request.decode()
 
-#Find a group that the given username is in, searches from group 0 to group i and returns the integer i indicating the groupID number
-def findGroupByUserName(userName):
-    i=0
-    for group in groups:
-        for client in group.clients:
-            if client.userName == userName:
-                return i
-        i=i+1
-    return -1
+        inputCommand = request.split("`")
+        if inputCommand[0] == "ag":
+            print("you reached command ag")
+            connectionSocket.send("Group 0,Group 1,Group 2,Group 3,Group 4,Group 5,Group 6,Group 7,Group 8,Group 9,Group 10,Group 11,Group 12,Group 13,Group 14")
+            messageSubject = str(groups[1].message[0].subject)
+            connectionSocket.send(messageSubject)
+        elif inputCommand[0] == "sg":
+            print("you reached command sg")
+            toSend = ""
+            for i in range(1,len(inputCommand)):
+                newNumber = str(len(groups[groupMap[str(inputCommand[i])]].message)) + " "
+                toSend = toSend + " " + newNumber
+            connectionSocket.send(toSend)
+
+        elif inputCommand[0] == "rg":
+            groupID = groupMap[str(inputCommand[1])]
+            dates = ""
+            subjects = ""
+            for i in range(len(groups[groupID].message)):
+                dates = str(groups[groupID].message[i].postDate) + "`"
+                subjects = str(groups[groupID].message[i].subject) + "`"
+            connectionSocket.send(dates)
+            connectionSocket.send(subjects)
+
+        #client wants to read a post
+        elif inputCommand[0] == "id":
+            groupName = str(inputCommand[1])
+            groupID = groupMap[groupName]
+            messageID = int(inputCommand[2])
+            displayDate = str(groups[groupID].message[messageID].postDate)
+            displaySubject = str(groups[groupID].message[messageID].subject)
+            displayAuthor = str(groups[groupID].message[messageID].userName)
+            displayContent = str(groups[groupID].message[messageID].userName)
+            connectionSocket.send(displayDate + "`" + displaySubject + "`" + displayAuthor + "`" + displayContent)
+
+        elif inputCommand[0] == "p":
+            postUsername = str(inputCommand[1])
+            print("Author: " + postUsername)
+            postGroup = str(inputCommand[2])
+            print("Group: " + postGroup)
+            postSubject = str(inputCommand[3])
+            print("Subject: " + postSubject)
+            postContent = str(inputCommand[4])
+            print("Content: " + postContent)
+            postTime = str(datetime.datetime.now())
+            print("Time: " + postTime)
+            groupID = groupMap[postGroup]
+            messagePost = Message(postUsername,postTime,postSubject,postContent)
+            groups[groupID].message.append(messagePost)
+
+            dates = ""
+            subjects = ""
+            for i in range(len(groups[groupID].message)):
+                dates = str(groups[groupID].message[i].postDate) + "`"
+                subjects = str(groups[groupID].message[i].subject) + "`"
+            connectionSocket.send(dates)
+            connectionSocket.send(subjects)
 
 
-#Finds a client through the username and groupID
-def findClient(username,groupID):
-    for client in groups[groupID].clients:
-        if client.userName==username:
-            return client
-    return -1
 
-def findMessage(messageID,messageGroup):
-    i=0
-    for group in groups:
-        for message in group.messages:
-            if message.id == messageID:
-                messageGroup.append(i)
-                return message
-        i=i+1
-    messageGroup.append(-1)
-    return -1
+
+                
 
 
 
 
+serverSocket = socket(AF_INET, SOCK_STREAM)
+serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+serverSocket.bind(("", port))
+serverSocket.listen(1)
 
+init()
 
+print "\nStarted listening on port " + str(port) + "\n"
+while True:
+    connectionSocket, addr = serverSocket.accept()
+    print "accepted connection and client added"
 
-
-
-
-
-
-
-
+    #start a new thread for the user
+    thread.start_new_thread(handler, (connectionSocket, addr))
 
 
