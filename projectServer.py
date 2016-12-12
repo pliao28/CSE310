@@ -97,7 +97,7 @@ def handler(connectionSocket, addr):
             displayDate = str(groups[groupID].message[messageID].postDate)
             displaySubject = str(groups[groupID].message[messageID].subject)
             displayAuthor = str(groups[groupID].message[messageID].userName)
-            displayContent = str(groups[groupID].message[messageID].userName)
+            displayContent = str(groups[groupID].message[messageID].body)
             connectionSocket.send(displayDate + "`" + displaySubject + "`" + displayAuthor + "`" + displayContent)
 
         elif inputCommand[0] == "p":
